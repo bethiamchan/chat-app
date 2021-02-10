@@ -40,12 +40,12 @@ export default class Start extends React.Component {
 						<View style={styles.colorContainer}>
 							{colors.map((color) => (
 								<View style={[styles.colorBorder, colorChoice === color ? { borderColor: color } : null]} key={color}>
-									<TouchableOpacity onPress={() => this.setState({ colorChoice: color })} style={[styles.colorButton, { backgroundColor: color }]} />
+									<TouchableOpacity onPress={() => this.setState({ colorChoice: color })} style={[styles.colorButton, { backgroundColor: color }]} accessible={true} accessibilityLabel="background color options" accessibilityHint="Choose the color for the background of your chat" accessibilityRole="button" />
 								</View>
 							))}
 						</View>
 
-						<TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Chat', { name: name, color: colorChoice })}>
+						<TouchableOpacity style={styles.button} onPress={() => navigation.navigate('Chat', { name: name, color: colorChoice })} accessible={true} accessibilityLabel="chat button" accessibilityHint="Start your chat" accessibilityRole="button">
 							<Text style={styles.buttonText}>Start Chatting</Text>
 						</TouchableOpacity>
 					</View>
