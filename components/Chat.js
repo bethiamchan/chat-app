@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, View, Platform, KeyboardAvoidingView } from 'react-native';
-import { Bubble, GiftedChat } from 'react-native-gifted-chat';
+import { Bubble, Day, GiftedChat, SystemMessage } from 'react-native-gifted-chat';
 
 export default class Chat extends React.Component {
 	constructor(props) {
@@ -47,6 +47,34 @@ export default class Chat extends React.Component {
 		}));
 	}
 
+	// Change styles for System Messages
+	renderSystemMessage(props) {
+		return (
+			<SystemMessage
+				{...props}
+				textStyle={{
+					color: '#fff',
+					fontSize: 12,
+					fontWeight: '600',
+				}}
+			/>
+		);
+	}
+
+	// Change styles for date
+	renderDay(props) {
+		return (
+			<Day
+				{...props}
+				textStyle={{
+					color: '#fff',
+					fontSize: 12,
+					fontWeight: '600',
+				}}
+			/>
+		);
+	}
+
 	// Change styles for chat bubbles
 	renderBubble(props) {
 		return (
@@ -69,6 +97,8 @@ export default class Chat extends React.Component {
 			// Sets colorChoice from Start screen as Chat screen background color
 			<View style={{ flex: 1, backgroundColor: color }}>
 				<GiftedChat
+					renderSystemMessage={this.renderSystemMessage.bind(this)}
+					renderDay={this.renderDay.bind(this)}
 					renderBubble={this.renderBubble.bind(this)}
 					messages={this.state.messages}
 					onSend={(messages) => this.onSend(messages)}
