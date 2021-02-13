@@ -1,6 +1,8 @@
 import React from 'react';
 import { StyleSheet, View, Platform, KeyboardAvoidingView } from 'react-native';
-import { Bubble, Day, GiftedChat, SystemMessage } from 'react-native-gifted-chat';
+import { Bubble, Day, GiftedChat, InputToolbar, SystemMessage } from 'react-native-gifted-chat';
+import AsynStorage from '@react-native-community/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 
 const firebase = require('firebase');
 require('firebase/firestore');
@@ -16,6 +18,7 @@ export default class Chat extends React.Component {
 				name: '',
 				avatar: '',
 			},
+			isConnected: false,
 		};
 
 		// Firebase configuration for app
@@ -32,9 +35,6 @@ export default class Chat extends React.Component {
 		if (!firebase.apps.length) {
 			firebase.initializeApp(firebaseConfig);
 		}
-
-		// Connect to Firestore to store messages in the database
-		this.referenceChatMessages = firebase.firestore().collection('messages');
 	}
 
 	componentDidMount() {
@@ -44,20 +44,41 @@ export default class Chat extends React.Component {
 		// Populate user's name, if entered
 		this.props.navigation.setOptions({ title: name });
 
-		// Authenticate user with Firebase
-		this.authUnsubscribe = firebase.auth().onAuthStateChanged((user) => {
-			if (!user) {
-				firebase.auth().signInAnonymously();
+		// Check if user is online
+		NetInfo.fetch().then((connection) => {
+			if (connection.isConnected) {
+				console.log('online');
+				this.setState({
+					isConnected: true,
+				});
+
+				// Connect to Firestore to store messages in the database
+				this.referenceChatMessages = firebase.firestore().collection('messages');
+
+				// Authenticate user with Firebase
+				this.authUnsubscribe = firebase.auth().onAuthStateChanged((user) => {
+					if (!user) {
+						firebase.auth().signInAnonymously();
+					}
+					this.setState({
+						user: {
+							_id: user.uid,
+							name: name,
+							avatar: 'https://placeimg.com/140/140/any',
+							createdAt: new Date(),
+						},
+						messages: [],
+					});
+					this.unsubscribe = this.referenceChatMessages.orderBy('createdAt', 'desc').onSnapshot(this.onCollectionUpdate);
+				});
+			} else {
+				console.log('offline');
+				this.setState({
+					isConnected: false,
+				});
+				this.getMessages();
+				window.alert('You are currently offline and will not be able to send messages.');
 			}
-			this.setState({
-				user: {
-					_id: user.uid,
-					name: name,
-					avatar: 'https://placeimg.com/140/140/any',
-				},
-				messages: [],
-			});
-			this.unsubscribe = this.referenceChatMessages.orderBy('createdAt', 'desc').onSnapshot(this.onCollectionUpdate);
 		});
 	}
 
@@ -67,6 +88,40 @@ export default class Chat extends React.Component {
 
 		// Stop listening for collection changes
 		this.authUnsubscribe();
+	}
+
+	// Load messages from storage when offline
+	async getMessages() {
+		let messages = '';
+		try {
+			messages = (await AsynStorage.getItem('messages')) || [];
+			this.setState({
+				messages: JSON.parse(messages),
+			});
+		} catch (error) {
+			console.log(error.message);
+		}
+	}
+
+	// Save messages locally when a new message is sent
+	async saveMessages() {
+		try {
+			await AsynStorage.setItem('messages', JSON.stringify(this.state.messages));
+		} catch (error) {
+			console.log(error.message);
+		}
+	}
+
+	// Delete messages
+	async deleteMessages() {
+		try {
+			await AsynStorage.removeItem('messages');
+			this.setState({
+				messages: [],
+			});
+		} catch (error) {
+			console.log(error.message);
+		}
 	}
 
 	// Add new message to Firestore db
@@ -88,7 +143,7 @@ export default class Chat extends React.Component {
 			}),
 			() => {
 				this.addMessage();
-				// this.saveMessages();
+				this.saveMessages();
 			}
 		);
 	}
@@ -159,6 +214,14 @@ export default class Chat extends React.Component {
 		);
 	}
 
+	// Hide input bar if user is offline
+	renderInputToolbar(props) {
+		if (this.state.isConnected == false) {
+		} else {
+			return <InputToolbar {...props} />;
+		}
+	}
+
 	render() {
 		// Define props passed from Start screen
 		const { color } = this.props.route.params;
@@ -166,7 +229,9 @@ export default class Chat extends React.Component {
 		return (
 			// Sets colorChoice from Start screen as Chat screen background color
 			<View style={{ flex: 1, backgroundColor: color }}>
-				<GiftedChat renderSystemMessage={this.renderSystemMessage.bind(this)} renderDay={this.renderDay.bind(this)} renderBubble={this.renderBubble.bind(this)} messages={this.state.messages} onSend={(messages) => this.onSend(messages)} user={this.state.user} />
+				<GiftedChat renderSystemMessage={this.renderSystemMessage.bind(this)} renderDay={this.renderDay.bind(this)} renderBubble={this.renderBubble.bind(this)} renderInputToolbar={this.renderInputToolbar.bind(this)} messages={this.state.messages} onSend={(messages) => this.onSend(messages)} user={this.state.user} />
+
+				{/* Prevent keyboard from hiding input field */}
 				{Platform.OS === 'android' ? <KeyboardAvoidingView behavior="height" /> : null}
 			</View>
 		);
