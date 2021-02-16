@@ -1,8 +1,10 @@
 import React from 'react';
-import { StyleSheet, View, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Platform, KeyboardAvoidingView } from 'react-native';
 import { Bubble, Day, GiftedChat, InputToolbar, SystemMessage } from 'react-native-gifted-chat';
 import AsynStorage from '@react-native-community/async-storage';
 import NetInfo from '@react-native-community/netinfo';
+import MapView from 'react-native-maps';
+import CustomActions from './CustomActions';
 
 const firebase = require('firebase');
 require('firebase/firestore');
@@ -19,6 +21,8 @@ export default class Chat extends React.Component {
 				avatar: '',
 			},
 			isConnected: false,
+			image: null,
+			location: null,
 		};
 
 		// Firebase configuration for app
@@ -92,7 +96,7 @@ export default class Chat extends React.Component {
 
 	// Load messages from storage when offline
 	async getMessages() {
-		let messages = '';
+		let messages = [];
 		try {
 			messages = (await AsynStorage.getItem('messages')) || [];
 			this.setState({
@@ -112,18 +116,6 @@ export default class Chat extends React.Component {
 		}
 	}
 
-	// Delete messages
-	async deleteMessages() {
-		try {
-			await AsynStorage.removeItem('messages');
-			this.setState({
-				messages: [],
-			});
-		} catch (error) {
-			console.log(error.message);
-		}
-	}
-
 	// Add new message to Firestore db
 	addMessage() {
 		const message = this.state.messages[0];
@@ -132,6 +124,8 @@ export default class Chat extends React.Component {
 			createdAt: message.createdAt,
 			text: message.text || '',
 			user: message.user,
+			image: message.image || null,
+			location: message.location || null,
 		});
 	}
 
@@ -165,6 +159,8 @@ export default class Chat extends React.Component {
 					name: data.user.name,
 					avatar: data.user.avatar,
 				},
+				image: data.image || null,
+				location: data.location || null,
 			});
 		});
 		this.setState({
@@ -222,6 +218,30 @@ export default class Chat extends React.Component {
 		}
 	}
 
+	// Import CustomActions to display ActionSheet
+	renderCustomActions = (props) => {
+		return <CustomActions {...props} />;
+	};
+
+	// Render view of map if location is included in message
+	renderCustomView(props) {
+		const { currentMessage } = props;
+		if (currentMessage.location) {
+			return (
+				<MapView
+					style={{ width: 150, height: 100, borderRadius: 13, margin: 3 }}
+					region={{
+						latitude: currentMessage.location.latitude,
+						longitude: currentMessage.location.longitude,
+						latitudeDelta: 0.0922,
+						longitudeDelta: 0.0421,
+					}}
+				/>
+			);
+		}
+		return null;
+	}
+
 	render() {
 		// Define props passed from Start screen
 		const { color } = this.props.route.params;
@@ -229,7 +249,7 @@ export default class Chat extends React.Component {
 		return (
 			// Sets colorChoice from Start screen as Chat screen background color
 			<View style={{ flex: 1, backgroundColor: color }}>
-				<GiftedChat renderSystemMessage={this.renderSystemMessage.bind(this)} renderDay={this.renderDay.bind(this)} renderBubble={this.renderBubble.bind(this)} renderInputToolbar={this.renderInputToolbar.bind(this)} messages={this.state.messages} onSend={(messages) => this.onSend(messages)} user={this.state.user} />
+				<GiftedChat renderSystemMessage={this.renderSystemMessage.bind(this)} renderDay={this.renderDay.bind(this)} renderBubble={this.renderBubble.bind(this)} renderInputToolbar={this.renderInputToolbar.bind(this)} renderActions={this.renderCustomActions} renderCustomView={this.renderCustomView} messages={this.state.messages} onSend={(messages) => this.onSend(messages)} user={this.state.user} />
 
 				{/* Prevent keyboard from hiding input field */}
 				{Platform.OS === 'android' ? <KeyboardAvoidingView behavior="height" /> : null}
@@ -237,5 +257,3 @@ export default class Chat extends React.Component {
 		);
 	}
 }
-// const styles = StyleSheet.create({
-// });

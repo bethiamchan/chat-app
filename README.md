@@ -13,3 +13,22 @@ This is a native app for mobile devices that allows users to chat and share thei
 * Google Firestore Database
 * Android Studio
 * Gifted Chat Library
+
+# Start The Project
+### **What You Need**
+* Node.js
+* Expo CLI
+
+`npm install expo-cli --global`
+
+### You will also need
+* the Expo app from your device's app store if you want to run the project from your mobile device.
+* a simulator/emulator such as Android Studio or iOS Simulator if you would like to run the app on your machine.
+
+### **Installing Dependencies**
+* Install the application's dependencies in the project directory using:
+`npm install`
+
+### **Run The Project**
+* To run the project, use:
+`expo start`
